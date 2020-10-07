@@ -42,53 +42,56 @@ describe('Dice Test', () => {
         const ccBefore = await provider.getBalance(cc.address)
         console.info(`bal [cc]: ${ccBefore.div(ether(1))}`)
 
-        const betMask = BigNumber.from(1)
-        const modulo = BigNumber.from(2)
-        const commitLastBlock = BigNumber.from(await provider.getBlockNumber() + 1)
+        let i = 0;
+        while (i++ < 10) {
+            const betMask = BigNumber.from(32)
+            const modulo = BigNumber.from(64)
+            const commitLastBlock = BigNumber.from(await provider.getBlockNumber() + 1)
 
-        const reveal = BigNumber.from(commitLastBlock)
-        // uint256 commit = uint256(keccak256(abi.encodePacked(reveal)));
-        const commitDigest = utils.solidityKeccak256(
-            ['uint256'],
-            [reveal])
+            const reveal = BigNumber.from(commitLastBlock)
+            // uint256 commit = uint256(keccak256(abi.encodePacked(reveal)));
+            const commitDigest = utils.solidityKeccak256(
+                ['uint256'],
+                [reveal])
 
-        const commit = BigNumber.from(commitDigest)
+            const commit = BigNumber.from(commitDigest)
 
-        console.info(`commitLastBlock: ${commitLastBlock}, reveal: ${reveal}, commit: ${commit}`)
+            console.info(`commitLastBlock: ${commitLastBlock}, reveal: ${reveal}, commit: ${commit}`)
 
-        const digest = utils.solidityKeccak256(
-            ['uint40', 'uint256'],
-            [commitLastBlock, commit])
-        console.info(`digest: ${digest}`)
+            const digest = utils.solidityKeccak256(
+                ['uint40', 'uint256'],
+                [commitLastBlock, commit])
+            console.info(`digest: ${digest}`)
 
-        const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(wallet.privateKey.slice(2), 'hex'))
-        console.info(`v: ${v}, r: ${r}, s: ${s}`)
+            const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(wallet.privateKey.slice(2), 'hex'))
+            console.info(`v: ${v}, r: ${r}, s: ${s}`)
 
-        const balBeforeBet = await investor.getBalance()
-        console.info(`investor [before bet]: ${balBeforeBet.div(ether(1))}`)
+            const balBeforeBet = await investor.getBalance()
+            console.info(`investor [before bet]: ${balBeforeBet.div(ether(1))}`)
 
-        const placeBet = cc.connect(investor).placeBet(betMask, modulo, commitLastBlock, commit, r, s, { ...overrides, value: ether(10) })
+            const placeBet = cc.connect(investor).placeBet(betMask, modulo, commitLastBlock, commit, r, s, { ...overrides, value: ether(10) })
 
-        const balAfterBet = await investor.getBalance()
-        console.info(`investor [after bet]: ${balAfterBet.div(ether(1))}`)
+            const balAfterBet = await investor.getBalance()
+            console.info(`investor [after bet]: ${balAfterBet.div(ether(1))}`)
 
-        // const hash = await expect(placeBet).emit(cc, 'Commit')
-        //     .withArgs(commit)
+            // const hash = await expect(placeBet).emit(cc, 'Commit')
+            //     .withArgs(commit)
 
-        const receipt = await placeBet
-        // console.info(`receipt: `, receipt)
-        const txHash = receipt.hash
-        // get block hash
-        const tx = await provider.getTransaction(txHash)
-        // console.info(`tx: `, tx)
-        const blockHash = tx.blockHash || ''
-        console.info(`blockHash: `, blockHash)
+            const receipt = await placeBet
+            // console.info(`receipt: `, receipt)
+            const txHash = receipt.hash
+            // get block hash
+            const tx = await provider.getTransaction(txHash)
+            // console.info(`tx: `, tx)
+            const blockHash = tx.blockHash || ''
+            console.info(`blockHash: `, blockHash)
 
-        await cc.connect(wallet).settleBet(reveal, Buffer.from(blockHash.slice(2), 'hex'))
+            await cc.connect(wallet).settleBet(reveal, Buffer.from(blockHash.slice(2), 'hex'))
 
-        const ccAfter = await provider.getBalance(cc.address)
-        console.info(`bal [cc]: ${ccAfter.div(ether(1))}`)
-        const balAfterSettle = await investor.getBalance()
-        console.info(`bal [after settle]: ${balAfterSettle.div(ether(1))}`)
+            const ccAfter = await provider.getBalance(cc.address)
+            console.info(`bal [cc]: ${ccAfter.div(ether(1))}`)
+            const balAfterSettle = await investor.getBalance()
+            console.info(`bal [after settle]: ${balAfterSettle.div(ether(1))}`)
+        }
     })
 })

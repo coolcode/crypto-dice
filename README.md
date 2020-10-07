@@ -1,5 +1,5 @@
-# Crypto Dice Game
-Crypto Dice Game
+# Crypto Dice Game 🎲
+Crypto Dice Game 🎲
 
 # Local Development
 
