@@ -34,7 +34,7 @@ describe('Dice Test', () => {
         console.info(`bal [before]: ${balBefore.div(ether(1))}`)
 
         // transfer 2 ETH to contract
-        await cc.fallback({ ...overrides, value: ether(100) })
+        await cc.fallback({ ...overrides, value: ether(1000) })
 
         const balAfter = await wallet.getBalance()
         console.info(`bal [after]: ${balAfter.div(ether(1))}`)
@@ -43,11 +43,12 @@ describe('Dice Test', () => {
         console.info(`bal [cc]: ${ccBefore.div(ether(1))}`)
 
         let i = 0;
-        while (i++ < 10) {
-            const betMask = BigNumber.from(32)
-            const modulo = BigNumber.from(64)
+        while (i++ < 20) {
+            const betMask = BigNumber.from(1)
+            const modulo = BigNumber.from(2)
             const commitLastBlock = BigNumber.from(await provider.getBlockNumber() + 1)
 
+            // TODO: how to retrieve `reveal` value?
             const reveal = BigNumber.from(commitLastBlock)
             // uint256 commit = uint256(keccak256(abi.encodePacked(reveal)));
             const commitDigest = utils.solidityKeccak256(
@@ -64,12 +65,13 @@ describe('Dice Test', () => {
             console.info(`digest: ${digest}`)
 
             const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(wallet.privateKey.slice(2), 'hex'))
-            console.info(`v: ${v}, r: ${r}, s: ${s}`)
+            console.info(`v: ${v}, r: ${utils.hexlify(r)}, s: ${utils.hexlify(s)}`)
 
             const balBeforeBet = await investor.getBalance()
             console.info(`investor [before bet]: ${balBeforeBet.div(ether(1))}`)
 
-            const placeBet = cc.connect(investor).placeBet(betMask, modulo, commitLastBlock, commit, r, s, { ...overrides, value: ether(10) })
+            // error!!! when v = 28
+            const placeBet = cc.connect(investor).placeBet(betMask, modulo, commitLastBlock, commit, utils.hexlify(r), utils.hexlify(s), { ...overrides, value: ether(10) })
 
             const balAfterBet = await investor.getBalance()
             console.info(`investor [after bet]: ${balAfterBet.div(ether(1))}`)
@@ -78,6 +80,7 @@ describe('Dice Test', () => {
             //     .withArgs(commit)
 
             const receipt = await placeBet
+            // receipt.wait()
             // console.info(`receipt: `, receipt)
             const txHash = receipt.hash
             // get block hash
