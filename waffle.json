@@ -1,0 +1,29 @@
+{
+  "outputType": "all",
+  "compilerType": "solcjs",
+  "compilerVersion": "./node_modules/solc",
+  "sourceDirectory": "./contracts",
+  "outputDirectory": "./build",
+  "compilerOptions": {
+    "outputSelection": {
+      "*": {
+        "*": [
+          "evm.bytecode.object",
+          "evm.deployedBytecode.object",
+          "abi",
+          "evm.bytecode.sourceMap",
+          "evm.deployedBytecode.sourceMap",
+          "metadata"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "evmVersion": "istanbul",
+    "optimizer": {
+      "enabled": true,
+      "runs": 999999
+    }
+  }
+}
