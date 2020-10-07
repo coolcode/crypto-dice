@@ -39,7 +39,7 @@
     "postcompile": "# compiled",
     "pretest": "# yarn compile",
     "test": "mocha",
-    "test-game": "mocha test/Dice2Win.spec",
+    "test-game": "mocha test/CryptoDice.spec",
     "prepublishOnly": "yarn test"
   },
   "license": "GPL-3.0-or-later"

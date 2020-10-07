@@ -9,7 +9,7 @@ pragma solidity ^0.6.0;
 //
 // * Refer to https://dice2.win/whitepaper.pdf for detailed description and proofs.
 
-contract Dice2Win {
+contract CryptoDice {
     /// *** Constants section
 
     // Each bet is deducted 1% in favour of the house, but no less than some minimum.

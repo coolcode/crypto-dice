@@ -4,7 +4,7 @@ import { solidity, MockProvider, deployContract } from 'ethereum-waffle'
 import { ecsign } from 'ethereumjs-util'
 
 import { ether, toEther } from './shared/util'
-import Dice2Win from '../build/Dice2Win.json'
+import CryptoDice from '../build/CryptoDice.json'
 
 chai.use(solidity)
 
@@ -23,7 +23,7 @@ describe('Dice Test', () => {
 
     let cc: Contract
     beforeEach(async function () {
-        cc = await deployContract(wallet, Dice2Win, [], overrides)
+        cc = await deployContract(wallet, CryptoDice, [], overrides)
         await cc.setSecretSigner(wallet.address)
         await cc.setCroupier(wallet.address)
         await cc.setMaxProfit(ether(50))
