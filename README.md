@@ -1,5 +1,5 @@
-# Crypto Monopoly Game
-Crypto Monopoly Game (Smart Contracts + UI)
+# Crypto Dice Game
+Crypto Dice Game
 
 # Local Development
 
