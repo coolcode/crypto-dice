@@ -42,7 +42,7 @@ describe('Dice Test', () => {
         const ccBefore = await provider.getBalance(cc.address)
         console.info(`bal [cc]: ${ccBefore.div(ether(1))}`)
 
-        const betMask = BigNumber.from(2)
+        const betMask = BigNumber.from(1)
         const modulo = BigNumber.from(2)
         const commitLastBlock = BigNumber.from(await provider.getBlockNumber() + 1)
 
@@ -55,13 +55,11 @@ describe('Dice Test', () => {
         const commit = BigNumber.from(commitDigest)
 
         console.info(`commitLastBlock: ${commitLastBlock}, reveal: ${reveal}, commit: ${commit}`)
-        // const commit = BigNumber.from(11)
 
         const digest = utils.solidityKeccak256(
             ['uint40', 'uint256'],
             [commitLastBlock, commit])
         console.info(`digest: ${digest}`)
-
 
         const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), Buffer.from(wallet.privateKey.slice(2), 'hex'))
         console.info(`v: ${v}, r: ${r}, s: ${s}`)
@@ -86,7 +84,7 @@ describe('Dice Test', () => {
         const blockHash = tx.blockHash || ''
         console.info(`blockHash: `, blockHash)
 
-        const settleBet = await cc.connect(wallet).settleBet(reveal, Buffer.from(blockHash.slice(2), 'hex'))
+        await cc.connect(wallet).settleBet(reveal, Buffer.from(blockHash.slice(2), 'hex'))
 
         const ccAfter = await provider.getBalance(cc.address)
         console.info(`bal [cc]: ${ccAfter.div(ether(1))}`)
