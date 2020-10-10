@@ -2,9 +2,9 @@
 Crypto Dice Game 🎲
 
 - Knowledge: keccak256, ecsign, ecrecover
-- Soldity: ^0.6.6
+- Solidity: ^0.6.6
 - Tool:  ethereum-waffle
-- UnitTest: Typescript + mocha + chai
+- UnitTest: TypeScript + mocha + chai
 
 # Local Development
 
