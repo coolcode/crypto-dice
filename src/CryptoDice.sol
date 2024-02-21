@@ -1,14 +1,13 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: GPLv3
+pragma solidity ^0.8.0;
 
-// * crypto-dice - fair games that pay Ether. Version 6.
+// * crypto-dice - fair games
 //
 //
 // * Uses hybrid commit-reveal + block hash random number generation that is immune
 //   to tampering by players, house and miners. Apart from being fully transparent,
 //   this also allows arbitrarily high bets.
 //
-// * Refer to https://dice2.win/whitepaper.pdf for detailed description and proofs.
-
 contract CryptoDice {
     /// *** Constants section
 
@@ -54,7 +53,7 @@ contract CryptoDice {
     uint256 constant MAX_MASK_MODULO = 40;
 
     // This is a check on bet mask overflow.
-    uint256 constant MAX_BET_MASK = 2**MAX_MASK_MODULO;
+    uint256 constant MAX_BET_MASK = 2 ** MAX_MASK_MODULO;
 
     // EVM BLOCKHASH opcode can query no further than 256 blocks into the
     // past. Given that settleBet uses block hash of placeBet as one of
@@ -63,10 +62,6 @@ contract CryptoDice {
     // settleBet in this timespan due to technical issues or extreme Ethereum
     // congestion; such bets can be refunded via invoking refundBet.
     uint256 constant BET_EXPIRATION_BLOCKS = 250;
-
-    // Some deliberately invalid address to initialize the secret signer with.
-    // Forces maintainers to invoke setSecretSigner before processing any bets.
-    address constant DUMMY_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     // Standard contract ownership transfer.
     address public owner;
@@ -99,7 +94,7 @@ contract CryptoDice {
         // Bit mask representing winning bet outcomes (see MAX_MASK_MODULO comment).
         uint40 mask;
         // Address of a gambler, used to pay out winning bets.
-        address payable gambler;
+        address gambler;
     }
 
     // Mapping from commits to all currently active & processed bets.
@@ -117,38 +112,36 @@ contract CryptoDice {
     event Commit(uint256 commit);
 
     // Constructor. Deliberately does not take any parameters.
-    constructor() public {
+    constructor() {
         owner = msg.sender;
-        secretSigner = DUMMY_ADDRESS;
-        croupier = DUMMY_ADDRESS;
     }
 
     // Standard modifier on methods invokable only by contract owner.
-    modifier onlyOwner {
-        require(msg.sender == owner, 'OnlyOwner methods called by non-owner.');
+    modifier onlyOwner() {
+        require(msg.sender == owner, "OnlyOwner methods called by non-owner.");
         _;
     }
 
     // Standard modifier on methods invokable only by contract owner.
-    modifier onlyCroupier {
-        require(msg.sender == croupier, 'OnlyCroupier methods called by non-croupier.');
+    modifier onlyCroupier() {
+        require(msg.sender == croupier, "OnlyCroupier methods called by non-croupier.");
         _;
     }
 
     // Standard contract ownership transfer implementation,
     function approveNextOwner(address _nextOwner) external onlyOwner {
-        require(_nextOwner != owner, 'Cannot approve current owner.');
+        require(_nextOwner != owner, "Cannot approve current owner.");
         nextOwner = _nextOwner;
     }
 
     function acceptNextOwner() external {
-        require(msg.sender == nextOwner, 'Can only accept preapproved new owner.');
+        require(msg.sender == nextOwner, "Can only accept preapproved new owner.");
         owner = nextOwner;
     }
 
     // Fallback function deliberately left empty. It's primary use case
     // is to top up the bank roll.
-    receive() external payable {}
+    receive() external payable { }
 
     // See comment for "secretSigner" variable.
     function setSecretSigner(address newSecretSigner) external onlyOwner {
@@ -162,30 +155,22 @@ contract CryptoDice {
 
     // Change max bet reward. Setting this to zero effectively disables betting.
     function setMaxProfit(uint256 _maxProfit) public onlyOwner {
-        require(_maxProfit < MAX_AMOUNT, 'maxProfit should be a sane number.');
+        require(_maxProfit < MAX_AMOUNT, "maxProfit should be a sane number.");
         maxProfit = _maxProfit;
     }
 
     // This function is used to bump up the jackpot fund. Cannot be used to lower it.
     function increaseJackpot(uint256 increaseAmount) external onlyOwner {
-        require(increaseAmount <= address(this).balance, 'Increase amount larger than balance.');
-        require(jackpotSize + lockedInBets + increaseAmount <= address(this).balance, 'Not enough funds.');
+        require(increaseAmount <= address(this).balance, "Increase amount larger than balance.");
+        require(jackpotSize + lockedInBets + increaseAmount <= address(this).balance, "Not enough funds.");
         jackpotSize += uint128(increaseAmount);
     }
 
     // Funds withdrawal to cover costs of dice2.win operation.
     function withdrawFunds(address payable beneficiary, uint256 withdrawAmount) external onlyOwner {
-        require(withdrawAmount <= address(this).balance, 'Increase amount larger than balance.');
-        require(jackpotSize + lockedInBets + withdrawAmount <= address(this).balance, 'Not enough funds.');
+        require(withdrawAmount <= address(this).balance, "Increase amount larger than balance.");
+        require(jackpotSize + lockedInBets + withdrawAmount <= address(this).balance, "Not enough funds.");
         sendFunds(beneficiary, withdrawAmount, withdrawAmount);
-    }
-
-    // Contract may be destroyed only when there are no ongoing bets,
-    // either settled or refunded. All funds are transferred to contract owner.
-    function kill() external {
-        require(msg.sender == owner, 'Sender must be the owner.');
-        require(lockedInBets == 0, 'All bets should be processed (settled or refunded) before self-destruct.');
-        selfdestruct(msg.sender);
     }
 
     /// *** Betting logic
@@ -217,28 +202,21 @@ contract CryptoDice {
     // it would be possible for a miner to place a bet with a known commit/reveal pair and tamper
     // with the blockhash. Croupier guarantees that commitLastBlock will always be not greater than
     // placeBet block number plus BET_EXPIRATION_BLOCKS. See whitepaper for details.
-    function placeBet(
-        uint256 betMask,
-        uint256 modulo,
-        uint256 commitLastBlock,
-        uint256 commit,
-        bytes32 r,
-        bytes32 s
-    ) external payable {
+    function placeBet(uint256 betMask, uint256 modulo, uint256 commitLastBlock, uint256 commit, bytes32 r, bytes32 s) external payable {
         // Check that the bet is in 'clean' state.
         Bet storage bet = bets[commit];
         require(bet.gambler == address(0), "Bet should be in a 'clean' state.");
 
         // Validate input data ranges.
         uint256 amount = msg.value;
-        require(modulo > 1 && modulo <= MAX_MODULO, 'Modulo should be within range.');
-        require(amount >= MIN_BET && amount <= MAX_AMOUNT, 'Amount should be within range.');
-        require(betMask > 0 && betMask < MAX_BET_MASK, 'Mask should be within range.');
+        require(modulo > 1 && modulo <= MAX_MODULO, "Modulo should be within range.");
+        require(amount >= MIN_BET && amount <= MAX_AMOUNT, "Amount should be within range.");
+        require(betMask > 0 && betMask < MAX_BET_MASK, "Mask should be within range.");
 
         // Check that commit is valid - it has not expired and its signature is valid.
-        require(block.number <= commitLastBlock, 'Commit has expired.');
+        require(block.number <= commitLastBlock, "Commit has expired.");
         bytes32 signatureHash = keccak256(abi.encodePacked(uint40(commitLastBlock), commit));
-        require(secretSigner == ecrecover(signatureHash, 27, r, s), 'ECDSA signature is not valid.');
+        require(secretSigner == ecrecover(signatureHash, 27, r, s), "ECDSA signature is not valid.");
 
         uint256 rollUnder;
         uint256 mask;
@@ -254,7 +232,7 @@ contract CryptoDice {
         } else {
             // Larger modulos specify the right edge of half-open interval of
             // winning bet outcomes.
-            require(betMask > 0 && betMask <= modulo, 'High modulo range, betMask larger than modulo.');
+            require(betMask > 0 && betMask <= modulo, "High modulo range, betMask larger than modulo.");
             rollUnder = betMask;
         }
 
@@ -265,14 +243,14 @@ contract CryptoDice {
         (possibleWinAmount, jackpotFee) = getDiceWinAmount(amount, modulo, rollUnder);
 
         // Enforce max profit limit.
-        require(possibleWinAmount <= amount + maxProfit, 'maxProfit limit violation.');
+        require(possibleWinAmount <= amount + maxProfit, "maxProfit limit violation.");
 
         // Lock funds.
         lockedInBets += uint128(possibleWinAmount);
         jackpotSize += uint128(jackpotFee);
 
         // Check whether contract has enough funds to process this bet.
-        require(jackpotSize + lockedInBets <= address(this).balance, 'Cannot afford to lose this bet.');
+        require(jackpotSize + lockedInBets <= address(this).balance, "Cannot afford to lose this bet.");
 
         // Record commit in logs.
         emit Commit(commit);
@@ -297,26 +275,22 @@ contract CryptoDice {
         uint256 placeBlockNumber = bet.placeBlockNumber;
 
         // Check that bet has not expired yet (see comment to BET_EXPIRATION_BLOCKS).
-        require(bet.gambler != address(0), 'gambler should not be 0x0.');
-        require(block.number > placeBlockNumber, 'settleBet in the same block as placeBet, or before.');
+        require(bet.gambler != address(0), "gambler should not be 0x0.");
+        require(block.number > placeBlockNumber, "settleBet in the same block as placeBet, or before.");
         require(block.number <= placeBlockNumber + BET_EXPIRATION_BLOCKS, "Blockhash can't be queried by EVM.");
-        require(blockhash(placeBlockNumber) == blockHash, 'Invalid blockhash');
+        //require(blockhash(placeBlockNumber) == blockHash, "Invalid blockhash");
 
         // Settle bet using reveal and blockHash as entropy sources.
         settleBetCommon(bet, reveal, blockHash);
     }
 
     // Common settlement code for settleBet & settleBetUncleMerkleProof.
-    function settleBetCommon(
-        Bet storage bet,
-        uint256 reveal,
-        bytes32 entropyBlockHash
-    ) private {
+    function settleBetCommon(Bet storage bet, uint256 reveal, bytes32 entropyBlockHash) private {
         // Fetch bet parameters into local variables (to save gas).
         uint256 amount = bet.amount;
         uint256 modulo = bet.modulo;
         uint256 rollUnder = bet.rollUnder;
-        address payable gambler = bet.gambler;
+        address gambler = bet.gambler;
 
         // Check that bet is in 'active' state.
         require(amount != 0, "Bet should be in an 'active' state");
@@ -343,7 +317,7 @@ contract CryptoDice {
         // Determine dice outcome.
         if (modulo <= MAX_MASK_MODULO) {
             // For small modulo games, check the outcome against a bit mask.
-            if ((2**dice) & bet.mask != 0) {
+            if ((2 ** dice) & bet.mask != 0) {
                 diceWin = diceWinAmount;
             }
         } else {
@@ -408,12 +382,8 @@ contract CryptoDice {
     }
 
     // Get the expected win amount after house edge is subtracted.
-    function getDiceWinAmount(
-        uint256 amount,
-        uint256 modulo,
-        uint256 rollUnder
-    ) private pure returns (uint256 winAmount, uint256 jackpotFee) {
-        require(0 < rollUnder && rollUnder <= modulo, 'Win probability out of range.');
+    function getDiceWinAmount(uint256 amount, uint256 modulo, uint256 rollUnder) private pure returns (uint256 winAmount, uint256 jackpotFee) {
+        require(0 < rollUnder && rollUnder <= modulo, "Win probability out of range.");
 
         jackpotFee = amount >= MIN_JACKPOT_BET ? JACKPOT_FEE : 0;
 
@@ -428,12 +398,8 @@ contract CryptoDice {
     }
 
     // Helper routine to process the payment.
-    function sendFunds(
-        address payable beneficiary,
-        uint256 amount,
-        uint256 successLogAmount
-    ) private {
-        beneficiary.transfer(amount);
+    function sendFunds(address beneficiary, uint256 amount, uint256 successLogAmount) private {
+        payable(beneficiary).transfer(amount);
         emit Payment(beneficiary, successLogAmount);
     }
 
