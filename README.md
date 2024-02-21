@@ -1,5 +1,7 @@
 # Crypto Dice Game 🎲
 
+![Github Actions](https://github.com/coolcode/crypto-dice/workflows/test/badge.svg)
+
 The Crypto Dice Game utilizes a robust form of randomness through commit/reveal schemes.
 
 ## Foundry
